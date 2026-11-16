@@ -1,9 +1,11 @@
 
-const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const { sendEmail } = require("../utils/sendEmail");
 const jwt = require("jsonwebtoken");
+
+const User = require("../models/User");
+const { sendEmail } = require("../utils/sendEmail");
+
 
 const register = async (req, res) => {
   try {
@@ -17,12 +19,9 @@ const register = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const existingUser = await pool.query(
-      "SELECT user_id FROM users WHERE email = $1",
-      [normalizedEmail]
-    );
+    const existingUser = await User.getUserByEmail(normalizedEmail);
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser) {
       return res.status(409).json({
         message: "Email already registered",
       });
@@ -30,41 +29,25 @@ const register = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Generate a secure verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
 
-    // Store the hash, not the original token
     const verificationTokenHash = crypto
       .createHash("sha256")
       .update(verificationToken)
       .digest("hex");
 
-    // Token expires after 15 minutes
     const verificationTokenExpires = new Date(
       Date.now() + 15 * 60 * 1000
     );
 
-    const result = await pool.query(
-      `INSERT INTO users (
-        full_name,
-        email,
-        phone_number,
-        password_hash,
-        verification_token_hash,
-        verification_token_expires
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING user_id, full_name, email, phone_number,
-      is_email_verified, created_at`,
-      [
-        full_name.trim(),
-        normalizedEmail,
-        phone_number || null,
-        passwordHash,
-        verificationTokenHash,
-        verificationTokenExpires,
-      ]
-    );
+    const user = await User.createUser({
+      full_name: full_name.trim(),
+      email: normalizedEmail,
+      phone_number: phone_number || null,
+      password_hash: passwordHash,
+      verification_token_hash: verificationTokenHash,
+      verification_token_expires: verificationTokenExpires,
+    });
 
     const verificationLink =
       `http://localhost:${process.env.PORT}/api/auth/verify-email?token=${verificationToken}`;
@@ -91,9 +74,11 @@ const register = async (req, res) => {
     }
 
     return res.status(201).json({
-      message: "Registration successful. Please check your email to verify your account.",
-      user: result.rows[0],
+      message:
+        "Registration successful. Please check your email to verify your account.",
+      user,
     });
+
   } catch (error) {
     console.error("Register error:", error.message);
 
@@ -102,7 +87,6 @@ const register = async (req, res) => {
     });
   }
 };
-
 
 
 const login = async (req, res) => {
@@ -117,18 +101,13 @@ const login = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [normalizedEmail]
-    );
+    const user = await User.getUserByEmail(normalizedEmail);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({
         message: "Invalid email or password",
       });
     }
-
-    const user = result.rows[0];
 
     const isPasswordCorrect = await bcrypt.compare(
       password,
@@ -141,34 +120,33 @@ const login = async (req, res) => {
       });
     }
 
-    
-   if (!user.is_email_verified) {
-    return res.status(403).json({
-        message: "Please verify your email before logging in"
-    });
-   }
+    if (!user.is_email_verified) {
+      return res.status(403).json({
+        message: "Please verify your email before logging in",
+      });
+    }
 
-   const token = jwt.sign(
-  {
-    user_id: user.user_id,
-    email: user.email,
-  },
-  process.env.JWT_SECRET,
-  { expiresIn: "1h" }
-);
-
+    const token = jwt.sign(
+      {
+        user_id: user.user_id,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
     return res.status(200).json({
-  message: "Login successful",
-  token: token,
-  user: {
-    user_id: user.user_id,
-    full_name: user.full_name,
-    email: user.email,
-    phone_number: user.phone_number,
-    is_email_verified: user.is_email_verified,
-  },
-});
+      message: "Login successful",
+      token: token,
+      user: {
+        user_id: user.user_id,
+        full_name: user.full_name,
+        email: user.email,
+        phone_number: user.phone_number,
+        is_email_verified: user.is_email_verified,
+      },
+    });
+
   } catch (error) {
     console.error("Login error:", error.message);
 
@@ -189,26 +167,14 @@ const verifyEmail = async (req, res) => {
       });
     }
 
-    const crypto = require("crypto");
-
     const tokenHash = crypto
       .createHash("sha256")
       .update(token)
       .digest("hex");
 
-    const result = await pool.query(
-      `UPDATE users
-       SET is_email_verified = true,
-           verification_token_hash = NULL,
-           verification_token_expires = NULL,
-           updated_at = NOW()
-       WHERE verification_token_hash = $1
-         AND verification_token_expires > NOW()
-       RETURNING user_id, full_name, email, is_email_verified`,
-      [tokenHash]
-    );
+    const user = await User.verifyEmail(tokenHash);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(400).json({
         message: "Invalid or expired verification link",
       });
@@ -216,8 +182,9 @@ const verifyEmail = async (req, res) => {
 
     return res.status(200).json({
       message: "Email verified successfully",
-      user: result.rows[0],
+      user,
     });
+
   } catch (error) {
     console.error("Verify email error:", error.message);
 
@@ -226,7 +193,6 @@ const verifyEmail = async (req, res) => {
     });
   }
 };
-
 
 
 const forgotPassword = async (req, res) => {
@@ -241,19 +207,13 @@ const forgotPassword = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const result = await pool.query(
-      "SELECT user_id, email FROM users WHERE email = $1",
-      [normalizedEmail]
-    );
+    const user = await User.getUserForPasswordReset(normalizedEmail);
 
-    // Return the same message whether the account exists or not
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(200).json({
         message: "If the account exists, a reset link will be sent",
       });
     }
-
-    const user = result.rows[0];
 
     const resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -262,15 +222,14 @@ const forgotPassword = async (req, res) => {
       .update(resetToken)
       .digest("hex");
 
-    const resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+    const resetTokenExpires = new Date(
+      Date.now() + 15 * 60 * 1000
+    );
 
-    await pool.query(
-      `UPDATE users
-       SET reset_token_hash = $1,
-           reset_token_expires = $2,
-           updated_at = NOW()
-       WHERE user_id = $3`,
-      [resetTokenHash, resetTokenExpires, user.user_id]
+    await User.saveResetToken(
+      user.user_id,
+      resetTokenHash,
+      resetTokenExpires
     );
 
     const resetLink =
@@ -291,6 +250,7 @@ const forgotPassword = async (req, res) => {
     return res.status(200).json({
       message: "If the account exists, a reset link will be sent",
     });
+
   } catch (error) {
     console.error("Forgot password error:", error.message);
 
@@ -299,7 +259,6 @@ const forgotPassword = async (req, res) => {
     });
   }
 };
-
 
 
 const resetPassword = async (req, res) => {
@@ -325,19 +284,9 @@ const resetPassword = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    const result = await pool.query(
-      `UPDATE users
-       SET password_hash = $1,
-           reset_token_hash = NULL,
-           reset_token_expires = NULL,
-           updated_at = NOW()
-       WHERE reset_token_hash = $2
-         AND reset_token_expires > NOW()
-       RETURNING user_id`,
-      [passwordHash, tokenHash]
-    );
+    const user = await User.resetPassword(tokenHash, passwordHash);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(400).json({
         message: "Invalid or expired reset link",
       });
@@ -346,6 +295,7 @@ const resetPassword = async (req, res) => {
     return res.status(200).json({
       message: "Password reset successfully",
     });
+
   } catch (error) {
     console.error("Reset password error:", error.message);
 
@@ -356,11 +306,10 @@ const resetPassword = async (req, res) => {
 };
 
 
-
-module.exports = { register, 
-                   login,
-                   verifyEmail,
-                   forgotPassword,
-                   resetPassword,
-             };
-
+module.exports = {
+  register,
+  login,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+};
