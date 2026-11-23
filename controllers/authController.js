@@ -1,4 +1,3 @@
-
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
@@ -52,7 +51,7 @@ const register = async (req, res) => {
     const verificationLink =
       `http://localhost:${process.env.PORT}/api/auth/verify-email?token=${verificationToken}`;
 
-    /*try {
+    try {
       await sendEmail({
         to: normalizedEmail,
         subject: "Vehicle Finder - Verify Your Email",
@@ -66,7 +65,12 @@ const register = async (req, res) => {
       });
     } catch (emailError) {
       console.error("Verification email error:", emailError.message);
-   */ }
+
+      return res.status(500).json({
+        message:
+          "Account created, but verification email could not be sent. Please try again later.",
+      });
+    }
 
     return res.status(201).json({
       message:
