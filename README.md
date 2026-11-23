@@ -102,7 +102,8 @@ If registration returns `VERIFICATION_EMAIL_FAILED`, the account already exists.
 ## Verification
 
 ```powershell
-npm.cmd test
+npm.cmd run check
+npm.cmd run test:coverage
 npm.cmd audit
 # Optional: use a separate test PostgreSQL database, never your production database.
 $env:TEST_DATABASE_URL = 'postgresql://postgres:password@localhost:5432/vehicle_finder_test'
@@ -110,3 +111,5 @@ npm.cmd test
 ```
 
 Without `TEST_DATABASE_URL`, the PostgreSQL integration test is skipped. With it, the test creates a uniquely named schema, applies migrations twice, exercises the complete account lifecycle over HTTP, and removes its own schema afterward. HTTP tests also cover malformed input, safe errors, CORS, JWT failures, unavailable dependencies, and email retry behavior.
+
+The database tests also exercise upgrades of legacy UUID user tables, nullable verification flags, duplicate-email rollback and retry, concurrent migrations, expired tokens, and concurrent password changes. SMTP tests run against a local test SMTP server; they send no external email. A competing password change returns `409 PASSWORD_CHANGED` instead of overwriting newer credentials. Non-password text fields reject control characters before a database query. Empty `DB_SSL` or `SMTP_SECURE` values are configuration errors; leave them unset or use `true`/`false` explicitly.

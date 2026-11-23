@@ -7,6 +7,9 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test",
+    "check:syntax": "node scripts/checkSyntax.js",
+    "check": "npm run check:syntax && npm test",
+    "test:coverage": "node --test --experimental-test-coverage",
     "db:migrate": "node scripts/migrate.js"
   },
   "keywords": [],
