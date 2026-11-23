@@ -5,15 +5,6 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { sendEmail } = require("../utils/sendEmail");
 
-const getBaseUrl = () => {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL.replace(/\/+$/, "");
-  }
-  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
-  }
-  return `http://localhost:${process.env.PORT || 8080}`;
-};
 
 const register = async (req, res) => {
   try {
@@ -57,11 +48,8 @@ const register = async (req, res) => {
       verification_token_expires: verificationTokenExpires,
     });
 
-    const baseUrl = getBaseUrl();
     const verificationLink =
-      `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
-
-    let emailSent = true;
+      `http://localhost:${process.env.PORT}/api/auth/verify-email?token=${verificationToken}`;
 
     try {
       await sendEmail({
@@ -76,16 +64,20 @@ const register = async (req, res) => {
         `,
       });
     } catch (emailError) {
-      emailSent = false;
       console.error("Verification email error:", emailError.message);
+
+      return res.status(500).json({
+        message:
+          "Account created, but verification email could not be sent. Please try again later.",
+      });
     }
 
     return res.status(201).json({
-      message: emailSent
-        ? "Registration successful. Please check your email to verify your account."
-        : "Account created, but verification email could not be sent right now.",
+      message:
+        "Registration successful. Please check your email to verify your account.",
       user,
     });
+
   } catch (error) {
     console.error("Register error:", error.message);
 
@@ -94,6 +86,7 @@ const register = async (req, res) => {
     });
   }
 };
+
 
 const login = async (req, res) => {
   try {
@@ -152,6 +145,7 @@ const login = async (req, res) => {
         is_email_verified: user.is_email_verified,
       },
     });
+
   } catch (error) {
     console.error("Login error:", error.message);
 
@@ -160,6 +154,7 @@ const login = async (req, res) => {
     });
   }
 };
+
 
 const verifyEmail = async (req, res) => {
   try {
@@ -188,6 +183,7 @@ const verifyEmail = async (req, res) => {
       message: "Email verified successfully",
       user,
     });
+
   } catch (error) {
     console.error("Verify email error:", error.message);
 
@@ -196,6 +192,7 @@ const verifyEmail = async (req, res) => {
     });
   }
 };
+
 
 const forgotPassword = async (req, res) => {
   try {
@@ -234,29 +231,25 @@ const forgotPassword = async (req, res) => {
       resetTokenExpires
     );
 
-    const baseUrl = getBaseUrl();
     const resetLink =
-      `${baseUrl}/reset-password?token=${resetToken}`;
+      `http://localhost:${process.env.PORT}/reset-password?token=${resetToken}`;
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: "Vehicle Finder - Reset Password",
-        text: `Open this link to reset your password: ${resetLink}`,
-        html: `
-          <h2>Reset Your Password</h2>
-          <p>Click the link below to reset your password:</p>
-          <a href="${resetLink}">Reset Password</a>
-          <p>This link expires in 15 minutes.</p>
-        `,
-      });
-    } catch (emailError) {
-      console.error("Forgot password email error:", emailError.message);
-    }
+    await sendEmail({
+      to: user.email,
+      subject: "Vehicle Finder - Reset Password",
+      text: `Open this link to reset your password: ${resetLink}`,
+      html: `
+        <h2>Reset Your Password</h2>
+        <p>Click the link below to reset your password:</p>
+        <a href="${resetLink}">Reset Password</a>
+        <p>This link expires in 15 minutes.</p>
+      `,
+    });
 
     return res.status(200).json({
       message: "If the account exists, a reset link will be sent",
     });
+
   } catch (error) {
     console.error("Forgot password error:", error.message);
 
@@ -265,6 +258,7 @@ const forgotPassword = async (req, res) => {
     });
   }
 };
+
 
 const resetPassword = async (req, res) => {
   try {
@@ -300,6 +294,7 @@ const resetPassword = async (req, res) => {
     return res.status(200).json({
       message: "Password reset successfully",
     });
+
   } catch (error) {
     console.error("Reset password error:", error.message);
 
@@ -309,10 +304,11 @@ const resetPassword = async (req, res) => {
   }
 };
 
+
 module.exports = {
   register,
   login,
   verifyEmail,
   forgotPassword,
   resetPassword,
-};
+};v
