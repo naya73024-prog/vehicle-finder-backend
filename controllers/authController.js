@@ -65,11 +65,6 @@ const register = async (req, res) => {
       });
     } catch (emailError) {
       console.error("Verification email error:", emailError.message);
-
-      return res.status(500).json({
-        message:
-          "Account created, but verification email could not be sent. Please try again later.",
-      });
     }
 
     return res.status(201).json({
