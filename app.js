@@ -6,6 +6,8 @@ const { createUserModel } = require("./models/User");
 const { createAuthController } = require("./controllers/authController");
 const { createUserController } = require("./controllers/userController");
 const { version } = require("./package.json");
+const swaggerUi = require("swagger-ui-express");
+const { createOpenApi } = require("./docs/openapi");
 
 function createApp({ config, pool, emailService, userModel = createUserModel(pool) }) {
   const app = express();
@@ -30,6 +32,19 @@ function createApp({ config, pool, emailService, userModel = createUserModel(poo
     next();
   });
   app.use(express.json({ limit: "32kb" }));
+  const openapi = createOpenApi(config);
+  app.get("/openapi.json", (req, res) => res.json(openapi));
+  const docsOptions = {
+    customSiteTitle: "Vehicle Finder API Documentation",
+    swaggerOptions: {
+      url: "/openapi.json",
+      validatorUrl: null,
+      persistAuthorization: false,
+      displayRequestDuration: true,
+      docExpansion: "list",
+    },
+  };
+  app.use("/api-docs", swaggerUi.serveFiles(null, docsOptions), swaggerUi.setup(null, docsOptions));
   app.get("/", (req, res) => res.json({
     status: "running",
     message: "Vehicle Finder server is running",
@@ -45,6 +60,8 @@ function createApp({ config, pool, emailService, userModel = createUserModel(poo
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
     health: "/health",
+    docs: "/api-docs/",
+    openapi: "/openapi.json",
   }));
   app.get("/health/live", (req, res) => res.json({ status: "ok" }));
   const readiness = async (req, res) => {

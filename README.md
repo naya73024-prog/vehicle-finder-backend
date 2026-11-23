@@ -2,6 +2,16 @@
 
 Express API with PostgreSQL, JWT authentication, email verification, and password recovery. Use Node.js 24; the deployment image pins this version.
 
+Open `GET /` to see the running server's public URL, environment, platform, listening host/port, uptime, and links to its healthcheck and documentation. This describes the HTTP process; `/health` separately verifies database readiness. The internal listening port may differ from the public HTTPS port on Railway or Render.
+
+## Interactive API documentation
+
+Visit `/api-docs/` on the same backend URL (for example `http://localhost:3000/api-docs/`). `/api-docs` redirects to the trailing-slash URL. The Swagger page covers every API route, including healthchecks, authentication, profile updates, and password recovery, with request schemas, examples, success responses, and error responses. The source OpenAPI 3 document is available at `/openapi.json` for importing into Postman or another client.
+
+Register a test account, follow the verification link from its email, and log in. Copy the returned JWT into **Authorize** without the `Bearer` prefix; Swagger adds the authorization header to protected requests. Replace example email tokens with tokens from actual messages. **Try it out** executes real API requests against the selected server. The default server is the current deployment, so this works on localhost, Railway and Render. A second server entry uses `PUBLIC_BASE_URL` when configured.
+
+Swagger assets are served by the backend without a CDN. The browser does not send the spec to an external validator and does not persist authorization after a reload. Documentation and the root status endpoint remain available when the database is unavailable.
+
 ## Local setup
 
 ```powershell
