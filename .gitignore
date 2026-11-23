@@ -1,3 +1,7 @@
 node_modules/
-#upload the .env file to Github
-#.env
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+.tmp/

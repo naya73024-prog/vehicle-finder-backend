@@ -1,68 +1,59 @@
+require("dotenv").config({ quiet: true });
+const logger = require("./utils/logger");
+const { loadConfig } = require("./config/env");
+const { createPool } = require("./config/db");
+const { createEmailService } = require("./services/emailService");
+const { createApp } = require("./app");
 
-require("dotenv").config();
-
-const express = require("express");
-const pool = require("./config/db")
-const { createEmailService } = require("./utils/sendEmail");
-
-const app = express();
-app.use(express.json());
-
-
-const authRoutes = require ("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
-
-app.use("/api/auth",authRoutes);
-app.use("/api/users", userRoutes);
-
-
-const authMiddleware = require("./middleware/authMiddleware");
-
-app.get("/api/auth/profile", authMiddleware, (req, res) => {
-  res.status(200).json({
-    message: "Access granted",
-    user: req.user,
+function start() {
+  const config = loadConfig();
+  const pool = createPool(config);
+  const emailService = createEmailService(config);
+  const app = createApp({ config, pool, emailService });
+  const server = app.listen(config.port, config.host, () => {
+    logger.info("server.started", { port: config.port, host: config.host, environment: process.env.NODE_ENV || "development" });
   });
-});
-
-
-app.get("/api/db-check", async (req, res) => {
-    try{
-    const result = await pool.query(
-         "SELECT current_database() AS database_name"
-    );
-    res.json({
-        message:"Database connected successfully",
-        database:result.rows[0].database_name,
+  server.requestTimeout = 30000;
+  server.headersTimeout = 15000;
+  let stopping = false;
+  function shutdown(reason, exitCode = 0) {
+    if (stopping) return;
+    stopping = true;
+    logger.info("server.stopping", { reason });
+    const deadline = setTimeout(() => process.exit(1), 10000);
+    deadline.unref();
+    server.close(async () => {
+      try {
+        emailService.close();
+        await pool.end();
+      } catch (error) {
+        logger.error("server.shutdown_failed", { error });
+        exitCode = 1;
+      }
+      clearTimeout(deadline);
+      process.exitCode = exitCode;
     });
-
- }catch(error){
-    console.error(error.message);
-
-    res.status(500).json({
-        message:"Database connection failed"
-    });
- }
-
-});
-
-
-const PORT = process.env.PORT;
-
-createEmailService()
-  .then(() => {
-    console.log("Email service initialized successfully");
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error("Email service error:", error.message);
+  }
+  server.on("error", (error) => {
+    logger.error("server.listen_failed", { error });
+    shutdown("listen_error", 1);
   });
-
-
-
-
-
-
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("uncaughtException", (error) => {
+    logger.error("process.uncaught_exception", { error });
+    shutdown("uncaughtException", 1);
+  });
+  process.once("unhandledRejection", (error) => {
+    logger.error("process.unhandled_rejection", { error });
+    shutdown("unhandledRejection", 1);
+  });
+  return server;
+}
+if (require.main === module) {
+  try { start(); } catch (error) {
+    logger.error("server.startup_failed", { error });
+    process.exitCode = 1;
+  }
+}
+module.exports = { start };
