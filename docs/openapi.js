@@ -120,6 +120,7 @@ function createOpenApi(config) {
       bodySchema({ currentPassword: existingPassword, newPassword: password }),
       { currentPassword: "ExamplePass123!", newPassword: "NewExamplePass123!" }, {
         "200": message("Password changed successfully"), "401": authRequired,
+        "409": error("Password was changed by another request; retry with the current password", "Password changed during this request. Please try again.", "PASSWORD_CHANGED"),
         "400": error("Invalid body or incorrect current password", "Current password is incorrect"),
         "404": error("The authenticated user no longer exists", "User not found"),
       }, { security: bearer, description: "Clears any pending password-reset token. Existing JWTs expire normally after one hour." }) },

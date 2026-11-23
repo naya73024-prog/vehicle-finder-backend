@@ -10,7 +10,8 @@ function start() {
   const pool = createPool(config);
   const emailService = createEmailService(config);
   const app = createApp({ config, pool, emailService });
-  const server = app.listen(config.port, config.host, () => {
+  const server = app.listen(config.port, config.host);
+  server.once("listening", () => {
     logger.info("server.started", { port: config.port, host: config.host, environment: process.env.NODE_ENV || "development" });
   });
   server.requestTimeout = 30000;

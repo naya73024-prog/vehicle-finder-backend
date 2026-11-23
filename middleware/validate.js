@@ -6,7 +6,7 @@ function validate(rules, source = "body") {
     for (const [key, rule] of Object.entries(rules)) {
       const value = data[key];
       if (value === undefined && rule.optional) continue;
-      if (typeof value !== "string" || !value.trim() || (rule.max && value.length > rule.max) ||
+      if (typeof value !== "string" || !value.trim() || (!rule.password && /[\u0000-\u001f\u007f]/.test(value)) || (rule.max && value.length > rule.max) ||
           (rule.min && value.length < rule.min) || (rule.password && Buffer.byteLength(value) > 72) ||
           (rule.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) || (rule.token && !/^[a-f0-9]{64}$/i.test(value))) {
         return next(new AppError(400, `Invalid ${key}`, "VALIDATION_ERROR"));

@@ -44,7 +44,8 @@ function createApp({ config, pool, emailService, userModel = createUserModel(poo
       docExpansion: "list",
     },
   };
-  app.use("/api-docs", swaggerUi.serveFiles(null, docsOptions), swaggerUi.setup(null, docsOptions));
+  app.use("/api-docs", (req, res, next) => { req.logRoute = "/api-docs"; next(); },
+    swaggerUi.serveFiles(null, docsOptions), swaggerUi.setup(null, docsOptions));
   app.get("/", (req, res) => res.json({
     status: "running",
     message: "Vehicle Finder server is running",
@@ -76,9 +77,9 @@ function createApp({ config, pool, emailService, userModel = createUserModel(poo
   app.get("/health", readiness);
   app.get("/api/db-check", readiness);
   const authMiddleware = require("./middleware/authMiddleware")(config.jwtSecret);
+  app.get("/api/auth/profile", authMiddleware, (req, res) => res.json({ message: "Access granted", user: req.user }));
   app.use("/api/auth", require("./routes/authRoutes")(createAuthController(userModel, emailService, config)));
   app.use("/api/users", require("./routes/userRoutes")(createUserController(userModel), authMiddleware));
-  app.get("/api/auth/profile", authMiddleware, (req, res) => res.json({ message: "Access granted", user: req.user }));
   app.use((req, res, next) => next(new AppError(404, "Route not found", "NOT_FOUND")));
   app.use(errorHandler);
   return app;

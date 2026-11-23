@@ -131,18 +131,21 @@ function createUserModel(pool) {
     return result.rows[0];
   };
 
-  const updatePassword = async (userId, hashedPassword) => {
-    await pool.query(
-      "UPDATE users SET password_hash = $1, reset_token_hash = NULL, reset_token_expires = NULL, updated_at = NOW() WHERE user_id = $2",
-      [hashedPassword, userId]
+  const updatePassword = async (userId, hashedPassword, currentHash) => {
+    const result = await pool.query(
+      `UPDATE users SET password_hash = $1, reset_token_hash = NULL,
+       reset_token_expires = NULL, updated_at = NOW()
+       WHERE user_id = $2 AND password_hash = $3 RETURNING user_id`,
+      [hashedPassword, userId, currentHash]
     );
+    return result.rows[0];
   };
 
   const saveVerificationToken = async (userId, tokenHash, expires) => {
     await pool.query(
       `UPDATE users SET verification_token_hash = $1,
        verification_token_expires = $2, updated_at = NOW()
-       WHERE user_id = $3 AND is_email_verified = false`,
+       WHERE user_id = $3 AND is_email_verified IS NOT TRUE`,
       [tokenHash, expires, userId]
     );
   };

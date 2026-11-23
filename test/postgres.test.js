@@ -36,6 +36,7 @@ test("PostgreSQL: migrations, registration, verification, login, profiles and si
   };
   const getToken = () => new URL(sent.at(-1).text.split(" ").at(-1)).searchParams.get("token");
   assert.equal((await request("/health", undefined, "GET")).status, 200);
+  assert.equal((await request("/api/auth/register", { full_name: "Invalid\u0000Name", email: "invalid@example.com", password: "password123" })).status, 400);
   const registered = await request("/api/auth/register", { full_name: " Test User ", email: " TEST@EXAMPLE.COM ", password: "password123" });
   assert.equal(registered.status, 201);
   const credentials = { email: "test@example.com", password: "password123" };

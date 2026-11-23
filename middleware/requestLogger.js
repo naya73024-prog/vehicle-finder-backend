@@ -6,7 +6,7 @@ module.exports = (req, res, next) => {
   const start = process.hrtime.bigint();
   const log = (aborted) => logger.info("request.completed", {
     requestId: req.id, method: req.method,
-    route: req.route ? `${req.logBaseUrl || req.baseUrl || ""}${req.route.path}` : `${req.logBaseUrl || ""}/unmatched`,
+    route: req.logRoute || (req.route ? `${req.logBaseUrl || req.baseUrl || ""}${req.route.path}` : `${req.logBaseUrl || ""}/unmatched`),
     status: aborted ? 499 : res.statusCode, aborted,
     durationMs: Math.round(Number(process.hrtime.bigint() - start) / 1e6),
   });

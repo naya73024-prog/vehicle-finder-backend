@@ -1,10 +1,17 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { loadConfig } = require("../config/env");
+const { loadConfig, loadDatabaseConfig } = require("../config/env");
 const { createPool } = require("../config/db");
 const { createEmailService } = require("../services/emailService");
 const logger = require("../utils/logger");
 const env = { DATABASE_URL: "postgresql://postgres:test@localhost:5432/test", JWT_SECRET: "test-secret-longer-than-thirty-two-bytes" };
+
+test("migrations validate database configuration independently of application secrets", () => {
+  assert.equal(loadDatabaseConfig({ DATABASE_URL: env.DATABASE_URL }).dbPort, 5432);
+  assert.throws(() => loadDatabaseConfig({ DATABASE_URL: env.DATABASE_URL, DB_SSL: "" }));
+  assert.throws(() => loadDatabaseConfig({ DATABASE_URL: env.DATABASE_URL, DB_PORT: "not-a-port" }));
+  assert.throws(() => loadDatabaseConfig({}));
+});
 
 test("configuration supports platform ports, domain variables, and explicit DB credentials", () => {
   assert.equal(loadConfig(env).port, 3000);
@@ -16,7 +23,7 @@ test("configuration supports platform ports, domain variables, and explicit DB c
 
 test("configuration rejects missing secrets, malformed ports and incomplete production setup", () => {
   for (const override of [{ JWT_SECRET: "short" }, { DATABASE_URL: "https://example.com" }, { PORT: "0" }, { PORT: "65536" }, { PORT: "3000abc" },
-    { DB_SSL: "yes" }, { NODE_ENV: "production" }, { CORS_ORIGINS: "https://app.example.com/path" }]) {
+    { DB_SSL: "yes" }, { DB_SSL: "" }, { SMTP_SECURE: "" }, { NODE_ENV: "production" }, { CORS_ORIGINS: "https://app.example.com/path" }]) {
     assert.throws(() => loadConfig({ ...env, ...override }));
   }
   const production = { ...env, NODE_ENV: "production", PUBLIC_BASE_URL: "https://api.example.com", PASSWORD_RESET_URL: "https://app.example.com/reset-password",

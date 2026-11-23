@@ -10,10 +10,11 @@ function redact(value) {
   return result;
 }
 function clean(value, seen = new WeakSet()) {
+  if (typeof value === "bigint") return value.toString();
   if (value && typeof value === "object") {
     if (seen.has(value)) return "[Circular]";
     seen.add(value);
-    if (value instanceof Error) return { name: value.name, message: redact(value.message), code: value.code,
+    if (value instanceof Error) return { name: value.name, message: redact(value.message), code: clean(value.code, seen),
       stack: redact(value.stack), cause: value.cause ? clean(value.cause, seen) : undefined };
     if (Array.isArray(value)) return value.map((item) => clean(item, seen));
     return Object.fromEntries(Object.entries(value).map(([key, item]) =>

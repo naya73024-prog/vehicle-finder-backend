@@ -85,10 +85,12 @@ function createUserController(User) {
 
       const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-      await User.updatePassword(
+      const updated = await User.updatePassword(
         req.user.user_id,
-        hashedPassword
+        hashedPassword,
+        user.password_hash
       );
+      if (!updated) throw new AppError(409, "Password changed during this request. Please try again.", "PASSWORD_CHANGED");
 
       res.status(200).json({
         message: "Password changed successfully"

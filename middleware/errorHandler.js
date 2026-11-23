@@ -9,14 +9,17 @@ function errorHandler(error, req, res, next) {
   if (error.type === "entity.too.large") [status, code, message] = [413, "BODY_TOO_LARGE", "Request body exceeds the size limit"];
   if (error.status === 415) [status, code, message] = [415, "UNSUPPORTED_ENCODING", "Unsupported request encoding"];
   if (error.code === "23505") [status, code, message] = [409, "DUPLICATE_RESOURCE", "Email or another unique value is already registered"];
-  if (["ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN", "57P01", "53300", "08006", "08001"].includes(error.code)) [status, code, message] = [503, "SERVICE_UNAVAILABLE", "A required service is temporarily unavailable"];
+  if (["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN", "57P01", "57P03", "53300", "08006", "08001", "57014", "55P03"].includes(error.code) ||
+      ["Query read timeout", "timeout exceeded when trying to connect", "Connection terminated unexpectedly", "Connection terminated due to connection timeout"].includes(error.message)) {
+    [status, code, message] = [503, "SERVICE_UNAVAILABLE", "A required service is temporarily unavailable"];
+  }
   const loggedError = error.type === "entity.parse.failed" ? {
     name: error.name, message: "Malformed JSON request",
     stack: error.stack?.split("\n").filter((line) => /^\s+at /.test(line)).join("\n"),
   } : error;
   logger[status >= 500 ? "error" : "warn"]("request.failed", {
     requestId: req.id, method: req.method,
-    route: `${req.logBaseUrl || ""}${req.route?.path || "/unmatched"}`, status, code, error: loggedError,
+    route: req.logRoute || `${req.logBaseUrl || ""}${req.route?.path || "/unmatched"}`, status, code, error: loggedError,
   });
   res.status(status).json({ message, code, requestId: req.id });
 }

@@ -60,6 +60,7 @@ test("invalid types, absent bodies, short/overlong passwords and repeated tokens
   }
   assert.equal((await request("/api/auth/register", { method: "POST" })).status, 400);
   assert.equal((await request("/api/auth/verify-email?token=a&token=b")).status, 400);
+  assert.equal((await request("/api/auth/register", post({ full_name: "Bad\u0000Name", email: "a@example.com", password: "password123" }))).status, 400);
 });
 
 test("CORS preflight permits configured frontend and rejects others", async (t) => {
@@ -143,4 +144,23 @@ test("password reset mail points to frontend and unknown accounts share success 
   assert.deepEqual(known.body, unknown.body);
   assert.ok(mail.text.includes(`${config.resetUrl}?token=`));
   assert.equal(saved[1].length, 64);
+});
+
+test("profile and password errors handle deleted users, empty updates and stale credentials", async (t) => {
+  let stored;
+  const request = await fixture(t, { userModel: {
+    getUserById: async () => undefined, updateUser: async () => undefined,
+    getPasswordHash: async () => stored, updatePassword: async () => undefined,
+  } });
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${jwt.sign({ user_id: 1 }, config.jwtSecret, { expiresIn: "1h" })}` };
+  const put = (path, body) => request(path, { method: "PUT", headers, body: JSON.stringify(body) });
+  assert.equal((await request("/api/users/profile", { headers })).status, 404);
+  assert.equal((await put("/api/users/profile", {})).status, 400);
+  assert.equal((await put("/api/users/profile", { full_name: "Missing" })).status, 404);
+  assert.equal((await put("/api/users/change-password", { currentPassword: "old", newPassword: "newpassword123" })).status, 404);
+  stored = { password_hash: await bcrypt.hash("password123", 4) };
+  assert.equal((await put("/api/users/change-password", { currentPassword: "wrong", newPassword: "newpassword123" })).status, 400);
+  const stale = await put("/api/users/change-password", { currentPassword: "password123", newPassword: "newpassword123" });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.code, "PASSWORD_CHANGED");
 });

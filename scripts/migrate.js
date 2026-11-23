@@ -2,9 +2,11 @@ if (require.main === module) require("dotenv").config({ quiet: true });
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { createPool } = require("../config/db");
+const { loadDatabaseConfig } = require("../config/env");
 const logger = require("../utils/logger");
 async function migrate(pool) {
   const client = await pool.connect();
+  let failure;
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(734182901)");
@@ -19,13 +21,16 @@ async function migrate(pool) {
     }
     await client.query("COMMIT");
   } catch (error) {
-    await client.query("ROLLBACK");
+    failure = error;
+    try { await client.query("ROLLBACK"); } catch (rollbackError) {
+      logger.error("database.rollback_failed", { error: rollbackError });
+    }
     throw error;
-  } finally { client.release(); }
+  } finally { client.release(failure); }
 }
 if (require.main === module) {
   async function main() {
-    const pool = createPool({ dbPort: Number(process.env.DB_PORT || process.env.PGPORT || 5432), dbPoolMax: 1, dbTimeout: 10000 });
+    const pool = createPool({ ...loadDatabaseConfig(), dbPoolMax: 1, dbTimeout: 10000 });
     try { await migrate(pool); } finally { await pool.end(); }
   }
   main().catch((error) => {

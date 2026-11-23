@@ -21,7 +21,10 @@ function createEmailService(config, env = process.env, fetchImpl = fetch) {
             headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text, html }),
           });
-          if (!response.ok) throw new Error(`Email provider returned HTTP ${response.status}`);
+          if (!response.ok) {
+            await response.body?.cancel();
+            throw new Error(`Email provider returned HTTP ${response.status}`);
+          }
           const data = await response.json();
           if (!data.id) throw new Error("Email provider returned no message id");
           id = data.id;
