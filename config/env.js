@@ -34,7 +34,10 @@ function loadConfig(env = process.env) {
   if (emailProvider === "smtp" && !(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD)) throw new Error("SMTP_HOST, SMTP_USER and SMTP_PASSWORD are required");
   if (env.SMTP_SECURE && !["true", "false"].includes(env.SMTP_SECURE)) throw new Error("SMTP_SECURE must be true or false");
   return {
-    production, port, host: "0.0.0.0", baseUrl, resetUrl: resetUrl || `${baseUrl}/reset-password`,
+    production, environment: env.NODE_ENV || "development",
+    platform: env.RAILWAY_PROJECT_ID || env.RAILWAY_PUBLIC_DOMAIN ? "railway" :
+      env.RENDER || env.RENDER_EXTERNAL_URL ? "render" : "standalone",
+    port, host: "0.0.0.0", baseUrl, resetUrl: resetUrl || `${baseUrl}/reset-password`,
     jwtSecret: env.JWT_SECRET, emailProvider,
     smtpPort: integer(env, "SMTP_PORT", 587, 65535),
     dbPort: integer(env, "DB_PORT", env.PGPORT || 5432, 65535),

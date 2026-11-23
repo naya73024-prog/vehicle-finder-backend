@@ -5,6 +5,7 @@ const requestLogger = require("./middleware/requestLogger");
 const { createUserModel } = require("./models/User");
 const { createAuthController } = require("./controllers/authController");
 const { createUserController } = require("./controllers/userController");
+const { version } = require("./package.json");
 
 function createApp({ config, pool, emailService, userModel = createUserModel(pool) }) {
   const app = express();
@@ -29,7 +30,22 @@ function createApp({ config, pool, emailService, userModel = createUserModel(poo
     next();
   });
   app.use(express.json({ limit: "32kb" }));
-  app.get("/", (req, res) => res.json({ message: "Vehicle Finder API", health: "/health" }));
+  app.get("/", (req, res) => res.json({
+    status: "running",
+    message: "Vehicle Finder server is running",
+    service: "Vehicle Finder API",
+    version,
+    environment: config.environment || "development",
+    platform: config.platform || "standalone",
+    baseUrl: config.baseUrl,
+    host: config.host || "0.0.0.0",
+    port: config.port || req.socket.localPort,
+    runtime: "Node.js",
+    framework: "Express",
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    health: "/health",
+  }));
   app.get("/health/live", (req, res) => res.json({ status: "ok" }));
   const readiness = async (req, res) => {
     try {
