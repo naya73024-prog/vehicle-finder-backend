@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: vehicle-finder-backend
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run db:migrate && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: PASSWORD_RESET_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false

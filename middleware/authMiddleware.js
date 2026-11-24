@@ -1,28 +1,15 @@
-
 const jwt = require("jsonwebtoken");
-
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      message: "Access denied. Token is required",
-    });
-  }
-
-  const token = authHeader.split(" ")[1];
-
+const AppError = require("../utils/AppError");
+module.exports = (secret) => (req, res, next) => {
+  const match = req.headers.authorization?.match(/^Bearer\s+(\S+)$/i);
+  if (!match) return next(new AppError(401, "Access denied. Token is required", "AUTH_REQUIRED"));
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    const decoded = jwt.verify(match[1], secret, { algorithms: ["HS256"] });
+    if (!decoded || typeof decoded !== "object" || !decoded.user_id ||
+        !["string", "number"].includes(typeof decoded.user_id)) throw new Error("Invalid claims");
     req.user = decoded;
-
     next();
-  } catch (error) {
-    return res.status(401).json({
-      message: "Invalid or expired token",
-    });
+  } catch {
+    next(new AppError(401, "Invalid or expired token", "INVALID_TOKEN"));
   }
 };
-
-module.exports = authMiddleware;
