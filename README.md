@@ -58,7 +58,7 @@ Do not commit real environment credentials. `.gitignore` excludes new `.env` fil
 
 Connect the repository to the existing backend service and attach PostgreSQL. Set `DATABASE_URL` to the PostgreSQL service's variable reference, then set the production variables above. Generate a public domain for verification links.
 
-The included Dockerfile runs migrations and starts Node as the final process, so no custom start command is required. Clear any old start-command override that bypasses migrations, or use `npm run db:migrate && node server.js`. Set the healthcheck path to `/health` and its timeout to 120 seconds. Let Railway supply `PORT`.
+The included Dockerfile starts Node directly without running migrations. Clear any old Start Command or Pre-deploy Command containing `db:migrate`; use `node server.js` or `npm start` as the start command. Set the deployment healthcheck path to `/health/live` and its timeout to 120 seconds. Let Railway supply `PORT`. `/health` still reports database readiness and can return 503 while the HTTP server and documentation remain accessible.
 
 No `railway.json` is required. Railway's legacy Config as Code is deprecated; configure the existing service in its dashboard or import its configuration using the current IaC workflow. See [Railway configuration](https://docs.railway.com/infrastructure-as-code) and [healthchecks](https://docs.railway.com/deployments/healthchecks).
 
@@ -70,12 +70,14 @@ For a new service, use the included `render.yaml` Blueprint and fill in its prom
 | --- | --- |
 | Node version | `24` |
 | Build command | `npm ci --omit=dev` |
-| Start command | `npm run db:migrate && npm start` |
-| Health check | `/health` |
+| Start command | `npm start` |
+| Health check | `/health/live` |
 
-Alternatively deploy the Dockerfile, which already runs migrations. Set all production variables from the table above. Do not hardcode `PORT`; Render supplies it. See [Render web-service configuration](https://render.com/docs/web-services).
+Alternatively deploy the Dockerfile, which starts the server directly. Migrations are not part of startup. Set all production variables from the table above. Do not hardcode `PORT`; Render supplies it. See [Render web-service configuration](https://render.com/docs/web-services).
 
 ## Database migrations
+
+Migrations are manual only. Existing databases with the required schema do not need this command at startup. On an empty or incompatible database, API requests that use missing tables/columns will still fail until the schema is prepared; disabling automatic migrations does not repair database connectivity or schema problems.
 
 `npm run db:migrate` applies versioned SQL once, inside a transaction with a lock to serialize concurrent deployments. It creates a fresh `users` table or adds missing optional auth/timestamp columns to an existing table without removing records or changing primary keys. Core columns `user_id`, `full_name`, `email`, and `password_hash` must already have compatible types on existing installations.
 

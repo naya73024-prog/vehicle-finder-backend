@@ -4,8 +4,8 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci --omit=dev
-    startCommand: npm run db:migrate && npm start
-    healthCheckPath: /health
+    startCommand: npm start
+    healthCheckPath: /health/live
     envVars:
       - key: NODE_VERSION
         value: 24
