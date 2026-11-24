@@ -14,6 +14,8 @@ function createApp({ config, pool, emailService, userModel = createUserModel(poo
   app.disable("x-powered-by");
   app.use(requestLogger);
   app.use((req, res, next) => {
+
+
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "no-store");
     const origin = req.headers.origin;
