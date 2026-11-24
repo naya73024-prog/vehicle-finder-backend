@@ -23,7 +23,11 @@ function clean(value, seen = new WeakSet()) {
   return redact(value);
 }
 function write(level, event, fields = {}) {
-  const line = JSON.stringify({ timestamp: new Date().toISOString(), level, event, ...clean(fields) });
+  const safeFields = clean(fields);
+  // Hosting log viewers commonly display only the top-level message field.
+  // Keep structured details while making failures visible in their text view.
+  const message = safeFields.error?.message ? `${event}: ${safeFields.error.message}` : event;
+  const line = JSON.stringify({ timestamp: new Date().toISOString(), level, event, ...safeFields, message });
   (level === "error" ? process.stderr : process.stdout).write(`${line}\n`);
 }
 module.exports = {

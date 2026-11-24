@@ -17,6 +17,7 @@ test("migration CLI rejects invalid SSL before connecting and logs a structured 
   assert.equal(child.status, 1);
   const log = JSON.parse(child.stderr.trim());
   assert.equal(log.event, "database.migration_failed");
+  assert.equal(log.message, "database.migration_failed: DB_SSL must be true or false");
   assert.equal(log.error.message, "DB_SSL must be true or false");
 });
 

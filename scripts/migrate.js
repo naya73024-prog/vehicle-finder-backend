@@ -30,8 +30,12 @@ async function migrate(pool) {
 }
 if (require.main === module) {
   async function main() {
+    logger.info("database.migration_starting");
     const pool = createPool({ ...loadDatabaseConfig(), dbPoolMax: 1, dbTimeout: 10000 });
-    try { await migrate(pool); } finally { await pool.end(); }
+    try {
+      await migrate(pool);
+      logger.info("database.migration_completed");
+    } finally { await pool.end(); }
   }
   main().catch((error) => {
     logger.error("database.migration_failed", { error });
