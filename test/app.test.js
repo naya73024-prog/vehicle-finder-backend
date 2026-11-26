@@ -22,6 +22,14 @@ async function fixture(t, overrides = {}) {
 }
 const post = (body) => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
+test("missing reset frontend URL keeps the server online and rejects recovery before database writes", async (t) => {
+  const request = await fixture(t, { config: { ...config, resetUrl: undefined } });
+  assert.equal((await request("/")).status, 200);
+  const response = await request("/api/auth/forgot-password", post({ email: "a@example.com" }));
+  assert.equal(response.status, 503);
+  assert.equal(response.body.code, "PASSWORD_RESET_NOT_CONFIGURED");
+});
+
 test("health and database check work without email network startup", async (t) => {
   const request = await fixture(t);
   for (const path of ["/health", "/health/live", "/api/db-check"]) assert.equal((await request(path)).status, 200);

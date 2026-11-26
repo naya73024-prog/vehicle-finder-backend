@@ -33,7 +33,6 @@ function loadConfig(env = process.env) {
   if (production && !publicUrl) throw new Error("PUBLIC_BASE_URL is required in production");
   const baseUrl = httpUrl(publicUrl || `http://localhost:${port}`, "PUBLIC_BASE_URL", production);
   const resetUrl = env.PASSWORD_RESET_URL ? httpUrl(env.PASSWORD_RESET_URL, "PASSWORD_RESET_URL", production) : undefined;
-  if (production && !resetUrl) throw new Error("PASSWORD_RESET_URL must point to the frontend reset-password page");
   const emailProvider = env.EMAIL_PROVIDER || (env.RESEND_API_KEY ? "resend" : env.SMTP_HOST ? "smtp" : "disabled");
   if (!["resend", "smtp", "disabled"].includes(emailProvider)) throw new Error("EMAIL_PROVIDER must be resend, smtp or disabled");
   if (production && emailProvider === "disabled") throw new Error("Configure a production email provider (resend or smtp)");
@@ -45,7 +44,7 @@ function loadConfig(env = process.env) {
     production, environment: env.NODE_ENV || "development",
     platform: env.RAILWAY_PROJECT_ID || env.RAILWAY_PUBLIC_DOMAIN ? "railway" :
       env.RENDER || env.RENDER_EXTERNAL_URL ? "render" : "standalone",
-    port, host: "0.0.0.0", baseUrl, resetUrl: resetUrl || `${baseUrl}/reset-password`,
+    port, host: "0.0.0.0", baseUrl, resetUrl: resetUrl || (production ? undefined : `${baseUrl}/reset-password`),
     jwtSecret: env.JWT_SECRET, emailProvider,
     smtpPort: integer(env, "SMTP_PORT", 587, 65535),
     ...database,

@@ -36,7 +36,7 @@ Start from `.env.example`. Set these in the hosting dashboard for production:
 | `DATABASE_URL` | PostgreSQL connection URL supplied by the database provider |
 | `JWT_SECRET` | A random secret containing at least 32 bytes |
 | `PUBLIC_BASE_URL` | Public HTTPS backend URL, without a trailing slash |
-| `PASSWORD_RESET_URL` | Existing frontend HTTPS reset-password page |
+| `PASSWORD_RESET_URL` | Existing frontend HTTPS reset-password page; if absent, the server starts but password recovery returns `503 PASSWORD_RESET_NOT_CONFIGURED` |
 | `CORS_ORIGINS` | Comma-separated frontend origins, e.g. `https://app.example.com` |
 | `EMAIL_PROVIDER` | `resend` (HTTPS), or `smtp` |
 | `EMAIL_FROM` | Sender address on a verified domain |

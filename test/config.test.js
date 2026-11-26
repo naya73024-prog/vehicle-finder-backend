@@ -30,7 +30,7 @@ test("configuration rejects missing secrets, malformed ports and incomplete prod
     EMAIL_PROVIDER: "resend", RESEND_API_KEY: "test-key", EMAIL_FROM: "noreply@example.com" };
   assert.equal(loadConfig(production).emailProvider, "resend");
   assert.throws(() => loadConfig({ ...production, EMAIL_PROVIDER: "disabled" }));
-  assert.throws(() => loadConfig({ ...production, PASSWORD_RESET_URL: "" }));
+  assert.equal(loadConfig({ ...production, PASSWORD_RESET_URL: "" }).resetUrl, undefined);
   assert.throws(() => loadConfig({ ...production, PUBLIC_BASE_URL: "http://api.example.com" }));
 });
 

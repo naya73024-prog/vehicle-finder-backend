@@ -135,7 +135,7 @@ function createOpenApi(config) {
       "Interactive documentation for every API endpoint. Expand a route to see request fields, examples and success/error responses.",
       "Start by registering, open the verification link from your email, then log in. Paste the returned JWT into **Authorize** to call protected routes.",
       "Examples use fictitious data. Replace email tokens and JWT placeholders with real values from your own test account.",
-      "Requests with a body use application/json (32KB maximum). Errors include message, code and requestId; use the ID to locate the server log. Invalid JSON returns 400 INVALID_JSON. Unknown routes return 404 NOT_FOUND.",
+      "Requests with a body use application/json (32KB maximum). Errors include message, code and requestId; use the ID to locate the server log. Invalid JSON returns 400 INVALID_JSON. Unknown routes return 404 NOT_FOUND. Password recovery returns 503 PASSWORD_RESET_NOT_CONFIGURED when PASSWORD_RESET_URL is missing in production.",
       "CORS preflight OPTIONS requests return 204 for configured origins; disallowed origins receive 403 CORS_ORIGIN_DENIED.",
     ].join("\n\n") },
     servers: [{ url: "/", description: "Current server (local, Railway or Render)" },
