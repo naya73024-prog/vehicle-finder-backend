@@ -1,7 +1,7 @@
-const sensitiveKey = /password|secret|token|authorization|cookie|api.?key|connectionstring|database_url|^body$|^headers$/i;
+const sensitiveKey = /password|secret|token|authorization|cookie|api.?key|connectionstring|database_url|mongodb_uri|^body$|^headers$/i;
 function redact(value) {
   if (typeof value !== "string") return value;
-  let result = value.replace(/(?:postgres(?:ql)?|https?):\/\/[^\s"<>]+/gi, "[REDACTED_URL]")
+  let result = value.replace(/(?:mongodb(?:\+srv)?|postgres(?:ql)?|https?):\/\/[^\s"<>]+/gi, "[REDACTED_URL]")
     .replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
     .replace(/((?:password|token|secret|api_key)=)[^\s&]+/gi, "$1[REDACTED]");
   for (const [key, secret] of Object.entries(process.env)) {
