@@ -31,6 +31,19 @@ The app connects lazily, creates a case-insensitive unique email index plus toke
 
 MongoDB Atlas connections must use the provider's URI, permitted database user and network access configuration. Keep TLS enabled for Atlas; this application does not disable certificate verification. Configure DB_TIMEOUT_MS and DB_POOL_MAX for your service size. See [MongoDB connection options](https://www.mongodb.com/docs/drivers/node/current/connect/connection-options/).
 
+### Online Atlas setup
+
+The environment template selects Atlas and leaves the local MongoDB URI commented out. There is no automatic fallback to localhost. Supply your actual Atlas URI; an empty MONGODB_URI intentionally fails configuration validation instead of connecting to a different database.
+
+1. Create or select a cluster in MongoDB Atlas.
+2. Create a database user with read/write access to vehicle_finder (Atlas account login and database credentials are separate).
+3. Add your development machine's public IP and your hosting service's outbound IP addresses to the project's network access list.
+4. Open Connect > Drivers, select Node.js, and copy the connection string into MONGODB_URI in your private .env. Replace the credential placeholders; percent-encode special characters in the password.
+5. Keep MONGODB_DB_NAME=vehicle_finder. Set the same variables in Railway or Render, then restart/redeploy.
+6. Request GET /health. A 200 response confirms the connection and index setup. A running root page alone does not confirm Atlas connectivity.
+
+See [Atlas connection instructions](https://www.mongodb.com/docs/atlas/driver-connection/) and [network access configuration](https://www.mongodb.com/docs/atlas/security/ip-access-list/). Do not paste live credentials into chat or commit them to Git.
+
 Existing PostgreSQL data is not copied or deleted by this change. Moving existing accounts requires a separate export/import that maps IDs to ObjectIds, preserves password hashes, normalizes emails and converts timestamps to BSON dates. Old JWTs refer to old IDs; users should log in again after any data transfer. DATABASE_URL and DB_HOST/DB_USER/DB_PASSWORD settings are no longer used. Do not point MONGODB_URI at PostgreSQL.
 
 ## Deployment
