@@ -42,6 +42,8 @@ The environment template selects Atlas and leaves the local MongoDB URI commente
 5. Keep MONGODB_DB_NAME=vehicle_finder. Set the same variables in Railway or Render, then restart/redeploy.
 6. Request GET /health. A 200 response confirms the connection and index setup. A running root page alone does not confirm Atlas connectivity.
 
+For Atlas, the environment template uses DB_TIMEOUT_MS=30000 to allow initial server discovery and TLS connection setup. Set this value in your hosting environment as well; the application default remains 5000ms when the variable is omitted.
+
 See [Atlas connection instructions](https://www.mongodb.com/docs/atlas/driver-connection/) and [network access configuration](https://www.mongodb.com/docs/atlas/security/ip-access-list/). Do not paste live credentials into chat or commit them to Git.
 
 Existing PostgreSQL data is not copied or deleted by this change. Moving existing accounts requires a separate export/import that maps IDs to ObjectIds, preserves password hashes, normalizes emails and converts timestamps to BSON dates. Old JWTs refer to old IDs; users should log in again after any data transfer. DATABASE_URL and DB_HOST/DB_USER/DB_PASSWORD settings are no longer used. Do not point MONGODB_URI at PostgreSQL.
